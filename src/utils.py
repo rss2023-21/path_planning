@@ -67,7 +67,7 @@ class LineTrajectory(object):
             return (1.0-t)*self.distances[i] + t*self.distances[i+1]
 
     def addPoint(self, point):
-        print "adding point to trajectory:", point.x, point.y
+        # print "adding point to trajectory:", point.x, point.y
         self.points.append((point.x, point.y))
         self.update_distances()
         self.mark_dirty()
@@ -270,3 +270,11 @@ class SquareGrid:
         results = filter(self.in_bounds, neighbors)
         results = filter(self.passable, results)
         return results
+
+    def cost(self, a, b):
+        return 1
+        # (x1, y1) = a
+        # (x2, y2) = b
+        # return abs(x1 - x2) + abs(y1 - y2)
+        # return np.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+    

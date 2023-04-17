@@ -66,11 +66,13 @@ class PathPlan(object):
         self.grid = SquareGrid(m2.shape[0] // self.GRID_MAP_SCALE, m2.shape[1] // self.GRID_MAP_SCALE)
         grid_downsampled = m2[::self.GRID_MAP_SCALE, ::self.GRID_MAP_SCALE]
 
-        fig, ax = plt.subplots()
-        ax.imshow(grid_downsampled)
-        fig.savefig("/home/racecar/racecar_ws/src/path_planning/grid_downsampled.png")
+        # rospy.loginfo(np.unique(grid_downsampled))
 
-        self.grid.walls = [(u, v) for u in range(grid_downsampled.shape[0]) for v in range(grid_downsampled.shape[1]) if grid_downsampled[u, v] == 1]
+        # fig, ax = plt.subplots()
+        # ax.imshow(grid_downsampled)
+        # fig.savefig("/home/racecar/racecar_ws/src/path_planning/grid_downsampled.png")
+
+        self.grid.walls = set([(u, v) for u in range(grid_downsampled.shape[0]) for v in range(grid_downsampled.shape[1]) if grid_downsampled[u, v] == 100])
 
     def odom_cb(self, msg):
         # rospy.loginfo("Received odometry!")
@@ -92,15 +94,22 @@ class PathPlan(object):
         # plan path
         self.plan_path(self.start, self.goal, self.map)
 
-    def point_to_grid(self, point):
+    def point_to_grid_loc(self, point):
+        """ Convert point in real world coordinates to grid location """
         point_numpy = np.array([point.x, point.y]) - self.translation
         point_numpy /= self.resolution
-        
-        return (int(point.x) // self.GRID_MAP_SCALE, int(point.y) // self.GRID_MAP_SCALE)
+        point_numpy /= self.GRID_MAP_SCALE
+
+        # remember to swap coords!
+        grid_loc = (int(point_numpy[1]), int(point_numpy[0]))
+        # rospy.loginfo(grid_loc)
+        return grid_loc
 
     def grid_loc_to_point(self, grid_loc):
         """ Convert grid location to point in real world coordinates """
-        point_numpy = grid_loc * self.GRID_MAP_SCALE
+        point_numpy = np.array(grid_loc)[::-1] * self.GRID_MAP_SCALE
+        point_numpy = point_numpy.astype(float)
+        rospy.loginfo(point_numpy)
         point_numpy *= self.resolution
         point_numpy += self.translation
 
@@ -108,15 +117,59 @@ class PathPlan(object):
 
     def plan_path(self, start_point, end_point, map):
         rospy.loginfo('Planning path from (%f, %f) to (%f, %f)', start_point.x, start_point.y, end_point.x, end_point.y)
+        start = self.point_to_grid_loc(start_point)
+        goal = self.point_to_grid_loc(end_point)
 
-        self.trajectory.addPoint(start_point)
-        self.trajectory.addPoint(end_point)
+        # Sample code from https://www.redblobgames.com/pathfinding/a-star/
+        def heuristic(a, b):
+            # return 0
+            (x1, y1) = a
+            (x2, y2) = b
+            if a in self.grid.walls or b in self.grid.walls:
+                return 1000000
+            return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+            # return abs(x1 - x2) + abs(y1 - y2)
+            
+        frontier = PriorityQueue()
+        frontier.put(start, 0)
+        came_from = {}
+        cost_so_far = {}
+        came_from[start] = None
+        cost_so_far[start] = 0
+        
+        while not frontier.empty():
+            current = frontier.get()
+            
+            if current == goal:
+                break
+            
+            for next in self.grid.neighbors(current):
+                new_cost = cost_so_far[current] + self.grid.cost(current, next)
+                if next not in cost_so_far or new_cost < cost_so_far[next]:
+                    cost_so_far[next] = new_cost
+                    priority = new_cost + heuristic(next, goal)
+                    frontier.put(next, priority)
+                    came_from[next] = current
+    
+        # self.trajectory.addPoint(start_point)
+        # rospy.loginfo(came_from)
+        while current != start:
+            rospy.loginfo((current, cost_so_far[current]))
+            # rospy.loginfo(current)
+            self.trajectory.addPoint(self.grid_loc_to_point(current))
+            current = came_from[current]
+
+        # self.trajectory.addPoint(end_point)
 
         # publish trajectory
         self.traj_pub.publish(self.trajectory.toPoseArray())
 
         # visualize trajectory Markers
         self.trajectory.publish_viz()
+
+        # rospy.loginfo(start)
+        # rospy.loginfo(goal)
+        # rospy.loginfo(self.grid.walls)
 
 
 if __name__=="__main__":

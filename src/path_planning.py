@@ -160,7 +160,8 @@ class PathPlan(object):
             current = came_from[current]
 
         # self.trajectory.addPoint(end_point)
-
+	rospy.loginfo("The trajectory")
+	rospy.loginfo(self.trajectory.points)
         # publish trajectory
         self.traj_pub.publish(self.trajectory.toPoseArray())
 

@@ -36,6 +36,7 @@ class PurePursuit(object):
         ''' Clears the currently followed trajectory, and loads the new one from the message
         '''
         print "Receiving new trajectory:", len(msg.poses), "points"
+        rospy.loginfo("RECEIVED NEW TRAJECTORY!")
         self.trajectory.clear()
         self.trajectory.fromPoseArray(msg)
         self.trajectory.publish_viz(duration=0.0)
@@ -97,47 +98,47 @@ class PurePursuit(object):
                                                              self.trajectory.points[i+1], 
                                                              (xLoc, yLoc)))
 
-        # if (len(nearestPoints) > 0):
+        if (len(nearestPoints) > 0):
         # rospy.loginfo(self.trajectory.points)
         
-        nearSegmentIndex = np.argmin((nearestPoints))
-        
-        onePoint = None
-        otherPoint = None
-        i = nearSegmentIndex
-        while(onePoint == None):
-            startPoint = self.trajectory.points[i]
-            endPoint = self.trajectory.points[i + 1]
-            points = self.find_circle_line_intersection(curLoc,self.lookahead,np.array(startPoint),np.array(endPoint))
-            if points != None:
-                onePoint, otherPoint = points[0], points[1]
-            no, yes, theta = euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))
-            onePoint = self.checkInFront(onePoint,curLoc, theta)
-            otherPoint = self.checkInFront(otherPoint,curLoc, theta)
-            i += 1
-        
-        
-        if onePoint != None:
-            pose = PoseStamped()
-            pose.header.stamp = rospy.Time.now()
-            pose.header.frame_id = '/map'
-            pose.pose.position.x = onePoint[0]
-            pose.pose.position.y = onePoint[1]
-            self.pos1_publisher.publish(pose)
-            self.driveCommand(curLoc - onePoint, theta)
-            return
-        
-        
-        if otherPoint != None:
-            pose = PoseStamped()
-            pose.header.stamp = rospy.Time.now()
-            pose.header.frame_id = '/map'
-            pose.pose.position.x = otherPoint[0]
-            pose.pose.position.y = otherPoint[1]
-            self.pos2_publisher.publish(pose)
-            # self.driveCommand(otherPoint)
-            return
-        # rospy.loginfo(str(onePoint) + '||' + str(otherPoint)) 
+            nearSegmentIndex = np.argmin((nearestPoints))
+            
+            onePoint = None
+            otherPoint = None
+            i = nearSegmentIndex
+            while(onePoint == None):
+                startPoint = self.trajectory.points[i]
+                endPoint = self.trajectory.points[i + 1]
+                points = self.find_circle_line_intersection(curLoc,self.lookahead,np.array(startPoint),np.array(endPoint))
+                if points != None:
+                    onePoint, otherPoint = points[0], points[1]
+                no, yes, theta = euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))
+                onePoint = self.checkInFront(onePoint,curLoc, theta)
+                otherPoint = self.checkInFront(otherPoint,curLoc, theta)
+                i += 1
+            
+            
+            if onePoint != None:
+                pose = PoseStamped()
+                pose.header.stamp = rospy.Time.now()
+                pose.header.frame_id = '/map'
+                pose.pose.position.x = onePoint[0]
+                pose.pose.position.y = onePoint[1]
+                self.pos1_publisher.publish(pose)
+                self.driveCommand(curLoc - onePoint, theta)
+                return
+            
+            
+            if otherPoint != None:
+                pose = PoseStamped()
+                pose.header.stamp = rospy.Time.now()
+                pose.header.frame_id = '/map'
+                pose.pose.position.x = otherPoint[0]
+                pose.pose.position.y = otherPoint[1]
+                self.pos2_publisher.publish(pose)
+                # self.driveCommand(otherPoint)
+                return
+            # rospy.loginfo(str(onePoint) + '||' + str(otherPoint)) 
     
     def driveCommand(self, point, theta):
         # rospy.loginfo(str(point[1]) + ' ' +  str(point[0]))

@@ -27,6 +27,7 @@ class PathPlan(object):
         self.odom_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odom_cb)
 
 
+
     def map_cb(self, msg):
         rospy.loginfo("Received map!")
         rospy.loginfo("Map info: %d x %d, %f m/cell", msg.info.width, msg.info.height, msg.info.resolution)
@@ -36,6 +37,9 @@ class PathPlan(object):
 
         self.rotation = np.array([msg.info.origin.orientation.x, msg.info.origin.orientation.y, msg.info.origin.orientation.z, msg.info.origin.orientation.w])
         self.rotation = tf.transformations.euler_from_quaternion(self.rotation)
+        theta = self.rotation[2]
+        arr = [ [np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]  ]
+        self.rot_mat = (np.array(arr))
         # note: for the stata map, rotation is just the identity, so we ignore it in conversions between the map and real coordinates
 
         self.translation = np.array([msg.info.origin.position.x, msg.info.origin.position.y])
@@ -44,9 +48,14 @@ class PathPlan(object):
         rospy.loginfo("Rotation: %s", self.rotation)
         rospy.loginfo("Translation: %s", self.translation)
         rospy.loginfo("Resolution: %f", self.resolution)
+        rospy.loginfo("Rotation Matrix:")
+        rospy.loginfo(self.rot_mat)
+
 
         # convert map to numpy array
         m = np.array(msg.data).reshape((msg.info.height, msg.info.width))
+
+        
 
         # imshow and save image to map.png
         # fig, ax = plt.subplots()
@@ -96,21 +105,31 @@ class PathPlan(object):
 
     def point_to_grid_loc(self, point):
         """ Convert point in real world coordinates to grid location """
+        #Add rotation
+
         point_numpy = np.array([point.x, point.y]) - self.translation
+        # rospy.loginfo("pre-rotation")
+        # rospy.loginfo(point_numpy)
+
+        #inverse rotate
+        point_numpy = np.matmul(np.linalg.inv(self.rot_mat), point_numpy) #p = R^-1*p'
+        # rospy.loginfo("post-rotation")
+        # rospy.loginfo(point_numpy)
+        
         point_numpy /= self.resolution
         point_numpy /= self.GRID_MAP_SCALE
-
         # remember to swap coords!
         grid_loc = (int(point_numpy[1]), int(point_numpy[0]))
         # rospy.loginfo(grid_loc)
         return grid_loc
 
     def grid_loc_to_point(self, grid_loc):
+        #Add rotation
         """ Convert grid location to point in real world coordinates """
         point_numpy = np.array(grid_loc)[::-1] * self.GRID_MAP_SCALE
         point_numpy = point_numpy.astype(float)
-        rospy.loginfo(point_numpy)
         point_numpy *= self.resolution
+        point_numpy = np.matmul(self.rot_mat, point_numpy) #p' = R*p
         point_numpy += self.translation
 
         return Point(point_numpy[0], point_numpy[1], 0)
@@ -119,6 +138,10 @@ class PathPlan(object):
         rospy.loginfo('Planning path from (%f, %f) to (%f, %f)', start_point.x, start_point.y, end_point.x, end_point.y)
         start = self.point_to_grid_loc(start_point)
         goal = self.point_to_grid_loc(end_point)
+        rospy.loginfo("start")
+        rospy.loginfo(start)
+        rospy.loginfo("goal")
+        rospy.loginfo(goal)
 
         # Sample code from https://www.redblobgames.com/pathfinding/a-star/
         def heuristic(a, b):
@@ -154,14 +177,14 @@ class PathPlan(object):
         # self.trajectory.addPoint(start_point)
         # rospy.loginfo(came_from)
         while current != start:
-            rospy.loginfo((current, cost_so_far[current]))
+            #rospy.loginfo((current, cost_so_far[current]))
             # rospy.loginfo(current)
             self.trajectory.addPoint(self.grid_loc_to_point(current))
             current = came_from[current]
 
         # self.trajectory.addPoint(end_point)
-	rospy.loginfo("The trajectory")
-	rospy.loginfo(self.trajectory.points)
+	    # rospy.loginfo("The trajectory")
+	    # rospy.loginfo(self.trajectory.points)
         # publish trajectory
         self.traj_pub.publish(self.trajectory.toPoseArray())
 

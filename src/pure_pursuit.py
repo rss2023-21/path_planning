@@ -19,8 +19,9 @@ class PurePursuit(object):
     """
     def __init__(self):
         # self.odom_topic       = rospy.get_param("~odom_topic")
-        self.lookahead        = 1# FILL IN 
-        self.speed            = 1# FILL IN 
+        self.lookahead        = 2# FILL IN 
+        self.default_speed = 5
+        self.speed            = 5# FILL IN 
         self.wheelbase_length = .35 # FILL IN
         self.trajectory  = utils.LineTrajectory("/followed_trajectory")
         self.traj_sub = rospy.Subscriber("/trajectory/current", PoseArray, self.trajectory_callback, queue_size=1)
@@ -31,12 +32,12 @@ class PurePursuit(object):
         
         self.pos1_publisher = rospy.Publisher('/pose1', PoseStamped, queue_size=1)
         self.pos2_publisher = rospy.Publisher('/pose2', PoseStamped, queue_size=1)
+        rospy.loginfo('hi')
 
     def trajectory_callback(self, msg):
         ''' Clears the currently followed trajectory, and loads the new one from the message
         '''
         print "Receiving new trajectory:", len(msg.poses), "points"
-        rospy.loginfo("RECEIVED NEW TRAJECTORY!")
         self.trajectory.clear()
         self.trajectory.fromPoseArray(msg)
         self.trajectory.publish_viz(duration=0.0)
@@ -98,63 +99,69 @@ class PurePursuit(object):
                                                              self.trajectory.points[i+1], 
                                                              (xLoc, yLoc)))
 
-        if (len(nearestPoints) > 0):
+        # rospy.logerr('')
+        # if (len(nearestPoints) > 0):
         # rospy.loginfo(self.trajectory.points)
         
-            nearSegmentIndex = np.argmin((nearestPoints))
+        nearSegmentIndex = np.argmin((nearestPoints))
+        
+        onePoint = None
+        otherPoint = None
+        i = nearSegmentIndex
+        while(onePoint == None and otherPoint == None):
+            if (i >= len(self.trajectory.points) - 1):
+                rospy.logerr('no find path')
+                self.speed = 0
+                break
             
-            onePoint = None
-            otherPoint = None
-            i = nearSegmentIndex
-            while(onePoint == None):
-                startPoint = self.trajectory.points[i]
-                endPoint = self.trajectory.points[i + 1]
-                points = self.find_circle_line_intersection(curLoc,self.lookahead,np.array(startPoint),np.array(endPoint))
-                if points != None:
-                    onePoint, otherPoint = points[0], points[1]
-                no, yes, theta = euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))
-                onePoint = self.checkInFront(onePoint,curLoc, theta)
-                otherPoint = self.checkInFront(otherPoint,curLoc, theta)
-                i += 1
-            
-            
-            if onePoint != None:
-                pose = PoseStamped()
-                pose.header.stamp = rospy.Time.now()
-                pose.header.frame_id = '/map'
-                pose.pose.position.x = onePoint[0]
-                pose.pose.position.y = onePoint[1]
-                self.pos1_publisher.publish(pose)
-                self.driveCommand(curLoc - onePoint, theta)
-                return
-            
-            
-            if otherPoint != None:
-                pose = PoseStamped()
-                pose.header.stamp = rospy.Time.now()
-                pose.header.frame_id = '/map'
-                pose.pose.position.x = otherPoint[0]
-                pose.pose.position.y = otherPoint[1]
-                self.pos2_publisher.publish(pose)
-                # self.driveCommand(otherPoint)
-                return
-            # rospy.loginfo(str(onePoint) + '||' + str(otherPoint)) 
+            startPoint = self.trajectory.points[i]
+            endPoint = self.trajectory.points[i + 1]
+            points = self.find_circle_line_intersection(curLoc,self.lookahead,np.array(startPoint),np.array(endPoint))
+            if points != None:
+                onePoint, otherPoint = points[0], points[1]
+            no, yes, theta = euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))
+            onePoint = self.checkInFront(onePoint,curLoc, theta)
+            otherPoint = self.checkInFront(otherPoint,curLoc, theta)
+            i += 1
+            self.speed = self.default_speed
+        
+        if onePoint != None:
+            pose = PoseStamped()
+            pose.header.stamp = rospy.Time.now()
+            pose.header.frame_id = '/map'
+            pose.pose.position.x = onePoint[0]
+            pose.pose.position.y = onePoint[1]
+            self.pos1_publisher.publish(pose)
+            rospy.loginfo('hi')
+            self.driveCommand(curLoc - onePoint, theta)
+            return
+        
+        
+        if otherPoint != None:
+            pose = PoseStamped()
+            pose.header.stamp = rospy.Time.now()
+            pose.header.frame_id = '/map'
+            pose.pose.position.x = otherPoint[0]
+            pose.pose.position.y = otherPoint[1]
+            self.pos2_publisher.publish(pose)
+            self.driveCommand(curLoc - otherPoint, theta)
+            # self.driveCommand(otherPoint)
+            return
+        # rospy.loginfo(str(onePoint) + '||' + str(otherPoint)) 
     
     def driveCommand(self, point, theta):
-        # rospy.loginfo(str(point[1]) + ' ' +  str(point[0]))
+        # rospy.logerr(str(point[0]) + ' ' +  str(point[1]))
         drive_cmd = AckermannDriveStamped()
     
-        # rospy.loginfo(str(self.relative_x) + ' ' +  str(self.relative_y));
         
         nu = math.atan2(point[1], point[0])
-        rospy.loginfo(str(nu) + '||' + str(theta))
-        drive_angle = math.atan((2*self.wheelbase_length*math.sin(nu)/self.lookahead))
-        nu = theta - nu
+        nu = (nu - theta) % math.pi
+        drive_angle = (2*self.wheelbase_length*math.cos(nu)/self.lookahead)
+        rospy.logerr(str(drive_angle))
         drive_cmd.header.stamp = rospy.Time.now()
         drive_cmd.drive.steering_angle = drive_angle
         drive_cmd.drive.speed = self.speed
-
-        # rospy.loginfo((drive_speed)) 
+        
 
         self.drive_pub.publish(drive_cmd)
     
@@ -166,5 +173,6 @@ class PurePursuit(object):
 
 if __name__=="__main__":
     rospy.init_node("pure_pursuit")
+    # rospy.loginfo('hi2')
     pf = PurePursuit()
     rospy.spin()

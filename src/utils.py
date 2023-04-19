@@ -264,7 +264,10 @@ class SquareGrid:
     
     def neighbors(self, id):
         (x, y) = id
-        neighbors = [(x+1, y), (x-1, y), (x, y-1), (x, y+1)] # E W N S
+        # neighbors = [(x+1, y), (x-1, y), (x, y-1), (x, y+1)] # E W N S
+        # include diagonals for 8-connected grid
+        neighbors = [(x+1, y), (x-1, y), (x, y-1), (x, y+1), (x-1, y-1), (x+1, y-1), (x-1, y+1), (x+1, y+1)]
+
         # see "Ugly paths" section for an explanation:
         if (x + y) % 2 == 0: neighbors.reverse() # S N W E
         results = filter(self.in_bounds, neighbors)
@@ -272,9 +275,9 @@ class SquareGrid:
         return results
 
     def cost(self, a, b):
-        return 1
-        # (x1, y1) = a
-        # (x2, y2) = b
+        # return 1
+        (x1, y1) = a
+        (x2, y2) = b
         # return abs(x1 - x2) + abs(y1 - y2)
-        # return np.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+        return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
     

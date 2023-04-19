@@ -38,9 +38,7 @@ class PathPlan(object):
         self.rotation = np.array([msg.info.origin.orientation.x, msg.info.origin.orientation.y, msg.info.origin.orientation.z, msg.info.origin.orientation.w])
         self.rotation = tf.transformations.euler_from_quaternion(self.rotation)
         theta = self.rotation[2]
-        arr = [ [np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]  ]
-        self.rot_mat = (np.array(arr))
-        # note: for the stata map, rotation is just the identity, so we ignore it in conversions between the map and real coordinates
+        self.rot_mat = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
 
         self.translation = np.array([msg.info.origin.position.x, msg.info.origin.position.y])
         self.resolution = msg.info.resolution

@@ -8,8 +8,26 @@ import rospkg
 import time, os
 from utils import LineTrajectory, PriorityQueue, SquareGrid
 import matplotlib.pyplot as plt
-from skimage.morphology import disk, dilation
+# from skimage.morphology import disk, dilation
 import tf
+
+# polyfill for skimage.morphology
+def create_disk(radius):
+    y, x = np.ogrid[-radius:radius + 1, -radius:radius + 1]
+    disk = x**2 + y**2 <= radius**2
+    return disk.astype(np.uint8)
+
+def dilation(image, se):
+    padded_image = np.pad(image, ((se.shape[0]//2, se.shape[0]//2), (se.shape[1]//2, se.shape[1]//2)), mode='constant')
+    result = np.zeros_like(image)
+
+    for y in range(image.shape[0]):
+        for x in range(image.shape[1]):
+            roi = padded_image[y:y + se.shape[0], x:x + se.shape[1]]
+            result[y, x] = np.max(roi * se)
+
+    return result
+
 
 class PathPlan(object):
     """ Listens for goal pose published by RViz and uses it to plan a path from
@@ -25,6 +43,8 @@ class PathPlan(object):
         self.goal_sub = rospy.Subscriber("/move_base_simple/goal", PoseStamped, self.goal_cb, queue_size=10)
         self.traj_pub = rospy.Publisher("/trajectory/current", PoseArray, queue_size=10)
         self.odom_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odom_cb)
+
+        self.map = None
 
 
 
@@ -62,7 +82,10 @@ class PathPlan(object):
 
         # morphological dilations using skimage.morphology.disk
         # this makes the walls thicker to stop path planning from getting too close to the walls
-        m2 = dilation(m, disk(5))
+        # m2 = dilation(m, disk(5))
+
+        m2 = dilation(m, create_disk(5))
+
         # fig, ax = plt.subplots()
         # ax.imshow(m2)
         # fig.savefig("/home/racecar/racecar_ws/src/path_planning/map2.png")
@@ -91,6 +114,11 @@ class PathPlan(object):
         
 
     def goal_cb(self, msg):
+        while self.map is None:
+            # rospy.loginfo("No map received yet!")
+            # return
+            pass
+        
         rospy.loginfo("Received goal!")
         # update goal pose
         self.goal_pose = msg.pose

@@ -79,7 +79,7 @@ class PurePursuit(object):
     
     
     def checkInFront(self, point, robotLoc, theta):
-        if point == None:
+        if point is None:
             return point
         directionVec = np.array([math.cos(theta), math.sin(theta)])
         differenceVec = point - robotLoc
@@ -121,7 +121,7 @@ class PurePursuit(object):
         onePoint = None
         otherPoint = None
         i = nearSegmentIndex
-        while(onePoint == None and otherPoint == None):
+        while(onePoint is None and otherPoint is None):
             if (i >= len(self.trajectory.points) - 1):
                 rospy.logerr(str(len(self.trajectory.points)) + ' no find path')
                 self.speed = 0
@@ -140,7 +140,7 @@ class PurePursuit(object):
         
         
         
-        if onePoint != None:
+        if onePoint is not None:
             pose = PoseStamped()
             pose.header.stamp = rospy.Time.now()
             pose.header.frame_id = '/map'
@@ -152,7 +152,7 @@ class PurePursuit(object):
             return
         
         
-        if otherPoint != None:
+        if otherPoint is not None:
             pose = PoseStamped()
             pose.header.stamp = rospy.Time.now()
             pose.header.frame_id = '/map'

@@ -1,17 +1,23 @@
 # A reasonable number to start with
-num_particles: 200
-
-# The number of lidar beams emitted from
-# each particle. This doesn't need to be
-# equal to the actual number (>1000)
-# so long as you downsample properly
-num_beams_per_particle: 100
+num_particles: 400
 
 # The field of view centered around theta=0
 scan_field_of_view: 4.71 # radians
 
 # Discretize the theta space for faster ray tracing
 scan_theta_discretization: 500
+
+do_viz: True
+max_viz_particles: 60
+squash_factor: 2.2
+
+deterministic: true
+
+# The number of lidar beams emitted from
+# each particle. This doesn't need to be
+# equal to the actual number (>1000)
+# so long as you downsample properly
+num_beams_per_particle: 100
 
 # The names of topics to listen and publish to
 map_topic: "/map"

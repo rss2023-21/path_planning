@@ -141,6 +141,9 @@ class PathPlan(object):
         rospy.loginfo("goal")
         rospy.loginfo(goal)
 
+        # time how long it takes to plan path
+        start_time = time.time()
+
         # Sample code from https://www.redblobgames.com/pathfinding/a-star/
         def heuristic(a, b):
             # return 0
@@ -174,12 +177,19 @@ class PathPlan(object):
     
         # self.trajectory.addPoint(start_point)
         # rospy.loginfo(came_from)
+        # path_array = np.zeros((self.grid.width, self.grid.height))
+
         while current != start:
             #rospy.loginfo((current, cost_so_far[current]))
             # rospy.loginfo(current)
             self.trajectory.addPoint(self.grid_loc_to_point(current))
+            # path_array[current[0]][current[1]] = 1
             current = came_from[current]
 
+        # time how long it takes to plan path
+        end_time = time.time()
+        rospy.loginfo("Time to plan path: %f", end_time - start_time)
+        
         # self.trajectory.addPoint(end_point)
 	    # rospy.loginfo("The trajectory")
 	    # rospy.loginfo(self.trajectory.points)
@@ -188,6 +198,25 @@ class PathPlan(object):
 
         # visualize trajectory Markers
         self.trajectory.publish_viz()
+
+        # # create an array with size of the grid, and put the cost of each cell in the array using cost_so_far
+        # # fill array with 
+        # cost_array = np.zeros((self.grid.width, self.grid.height)) + 200
+        # for cell in cost_so_far:
+        #     cost_array[cell[0]][cell[1]] = cost_so_far[cell]
+
+        # # save colorbar to cost_array_colorbar.png
+        # fig, ax = plt.subplots()
+        # im = ax.imshow(cost_array)
+        # fig.colorbar(im)
+        # fig.savefig("/home/racecar/racecar_ws/src/path_planning/cost_array_colorbar.png")
+
+        # fig, ax = plt.subplots()
+        # im = ax.imshow(path_array)
+        # # fig.colorbar(im)
+        # fig.savefig("/home/racecar/racecar_ws/src/path_planning/path_array.png")
+
+        # # 
 
         # rospy.loginfo(start)
         # rospy.loginfo(goal)

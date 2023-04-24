@@ -177,19 +177,15 @@ class PathPlan(object):
     
         # self.trajectory.addPoint(start_point)
         # rospy.loginfo(came_from)
-        # path_array = np.zeros((self.grid.width, self.grid.height))
-
+        points_reversed = []
         while current != start:
-            #rospy.loginfo((current, cost_so_far[current]))
-            # rospy.loginfo(current)
-            self.trajectory.addPoint(self.grid_loc_to_point(current))
-            # path_array[current[0]][current[1]] = 1
+            # rospy.loginfo((current, cost_so_far[current]))
+            points_reversed.append(self.grid_loc_to_point(current))
             current = came_from[current]
 
-        # time how long it takes to plan path
-        end_time = time.time()
-        rospy.loginfo("Time to plan path: %f", end_time - start_time)
-        
+        for point in points_reversed[::-1]:
+            self.trajectory.addPoint(point)
+
         # self.trajectory.addPoint(end_point)
 	    # rospy.loginfo("The trajectory")
 	    # rospy.loginfo(self.trajectory.points)

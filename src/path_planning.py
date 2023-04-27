@@ -36,7 +36,7 @@ class PathPlan(object):
     GRID_MAP_SCALE = 5  # number of cells in grid map vs. actual map
 
     def __init__(self):
-        self.odom_topic = rospy.get_param("~odom_topic")
+        self.odom_topic = "/pf/pose/odom" # rospy.get_param("~odom_topic")
         rospy.loginfo("Using odometry topic: %s", self.odom_topic)
         self.map_sub = rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
         self.trajectory = LineTrajectory("/planned_trajectory")

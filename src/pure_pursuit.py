@@ -55,7 +55,7 @@ class PurePursuit(object):
         r = radius
         P1 = startPoint      # Start of line segment
         V = endPoint - startPoint # Vector along line segment
-        
+    
         
         a = V.dot(V)
         b = 2 * V.dot(P1 - Q)
@@ -116,7 +116,10 @@ class PurePursuit(object):
             return
             
         nearSegmentIndex = np.argmin((nearestPoints))
-        rospy.logerr(nearSegmentIndex)
+        # rospy.logerr("nearestPoints:")
+        # rospy.logerr(nearestPoints)
+        # rospy.logerr("near Seg Index:")
+        # rospy.logerr(nearSegmentIndex)
         
         onePoint = None
         otherPoint = None

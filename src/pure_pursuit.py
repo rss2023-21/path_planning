@@ -27,8 +27,8 @@ class PurePursuit(object):
         self.steering_constant = .35
         self.trajectory  = utils.LineTrajectory("/followed_trajectory")
         self.traj_sub = rospy.Subscriber("/trajectory/current", PoseArray, self.trajectory_callback, queue_size=1)
-        self.drive_pub = rospy.Publisher("/vesc/ackermann_cmd_mux/input/navigation", AckermannDriveStamped, queue_size=1)
-        self.odom_sub  = rospy.Subscriber('/pf/pose/odom', Odometry,
+        self.drive_pub = rospy.Publisher("/drive", AckermannDriveStamped, queue_size=1)
+        self.odom_sub  = rospy.Subscriber('/odom', Odometry,
                                           self.odom_callback,
                                           queue_size=1)
         
@@ -40,7 +40,9 @@ class PurePursuit(object):
     def trajectory_callback(self, msg):
         ''' Clears the currently followed trajectory, and loads the new one from the message
         '''
-        print "Receiving new trajectory:", len(msg.poses), "points"
+        rospy.logerr("Receiving new trajectory: %d points", len(msg.poses))
+	#rospy.logerr(len(msg.poses))
+	#rospy.logerr("points")
         self.trajectory.clear()
         self.trajectory.fromPoseArray(msg)
         self.trajectory.publish_viz(duration=0.0)
@@ -71,7 +73,7 @@ class PurePursuit(object):
         t1 = (-b + sqrt_disc) / (2 * a)
         t2 = (-b - sqrt_disc) / (2 * a)
         
-        rospy.logerr(str(t1) + '||' + str(t2))
+        #rospy.logerr(str(t1) + '||' + str(t2))
         
         # if not (0 <= t1 <= 1 or 0 <= t2 <= 1):
         #     return None
@@ -95,14 +97,14 @@ class PurePursuit(object):
         xLoc = msg.pose.pose.position.x
         yLoc = msg.pose.pose.position.y
         curLoc = np.array([xLoc, yLoc])
-        rospy.loginfo('hi')
+        #rospy.loginfo('hi')
         nearestPoints = []
         for i in range(len(self.trajectory.points) - 1):
              nearestPoints.append(self.minimum_distance(self.trajectory.points[i],
                                                              self.trajectory.points[i+1], 
                                                              (xLoc, yLoc)))
 
-        # rospy.logerr('')
+        #rospy.logerr("odom comin")
         # if (len(nearestPoints) > 0):
         # rospy.loginfo(self.trajectory.points)
         
@@ -118,7 +120,7 @@ class PurePursuit(object):
             return
           
         nearSegmentIndex = np.argmin((nearestPoints))
-        rospy.logerr(nearSegmentIndex)
+        #rospy.logerr(nearSegmentIndex)
         
         onePoint = None
         otherPoint = None
@@ -171,16 +173,19 @@ class PurePursuit(object):
             self.pos2_publisher.publish(pose)
         
         if not onePoint is None:
+	    rospy.loginfo("smths moving")
             self.driveCommand(curLoc - onePoint, theta)
             return
         
         
         if not otherPoint is None:
+            rospy.loginfo("Other thing is moving")
             self.driveCommand(curLoc - otherPoint, theta)
             return
     
     def driveCommand(self, point, theta):
-        rospy.logerr(str(point[0]) + ' ' +  str(point[1]))
+        rospy.logerr("Sending drive command")
+	rospy.logerr(str(point[0]) + ' ' +  str(point[1]))
         drive_cmd = AckermannDriveStamped()
     
         

@@ -20,7 +20,7 @@ class PurePursuit(object):
     """
     def __init__(self):
         # self.odom_topic       = rospy.get_param("~odom_topic")
-        self.lookahead        = 1# FILL IN 
+        self.lookahead        = 0.6# FILL IN 
         self.default_speed = 0.1
         self.speed            = 0.1 # FILL IN 
         self.wheelbase_length = .35 # FILL IN
@@ -127,13 +127,16 @@ class PurePursuit(object):
         otherPoint = None
         i = nearSegmentIndex
         rospy.logerr("Current index: %d", i)
+        rospy.logerr("Current distance value: %d", len(self.trajectory.points) - i ) 
+
         while(onePoint is None and otherPoint is None):
             if (i >= len(self.trajectory.points) - 1):
                 rospy.logerr(str(nearSegmentIndex) + ' no find path')
                 self.speed = 0
-                #break
-
-            if (len(self.trajectory.points) - i < 100):
+                break
+            
+            #rospy.logerr("Index in while loop: %d", i)
+            if (len(self.trajectory.points) - nearSegmentIndex < 30):
                 self.speed = 0
                 drive_cmd = AckermannDriveStamped()
                 drive_cmd.header.stamp = rospy.Time.now()
@@ -142,7 +145,8 @@ class PurePursuit(object):
                 rospy.logerr('STOPPING, WITHIN LOOKAHEAD DISTANCE')
                 self.drive_pub.publish(drive_cmd)
                 break
-
+            
+            #rospy.logwarn("just seeing if it continued after the break")
             startPoint = self.trajectory.points[i]
             endPoint = self.trajectory.points[i+1]
             points = self.find_circle_line_intersection(curLoc,self.lookahead,np.array(startPoint),np.array(endPoint))

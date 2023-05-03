@@ -84,7 +84,7 @@ class PathPlan(object):
         # this makes the walls thicker to stop path planning from getting too close to the walls
         # m2 = dilation(m, disk(5))
 
-        m2 = dilation(m, create_disk(2)) #Testing 
+        m2 = dilation(m, create_disk(8)) #Testing 
 
         # fig, ax = plt.subplots()
         # ax.imshow(m2)

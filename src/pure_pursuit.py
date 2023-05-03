@@ -20,9 +20,9 @@ class PurePursuit(object):
     """
     def __init__(self):
         # self.odom_topic       = rospy.get_param("~odom_topic")
-        self.lookahead        = 2# FILL IN 
-        self.default_speed = .1
-        self.speed            = .1# FILL IN 
+        self.lookahead        = 1# FILL IN 
+        self.default_speed = 0.1
+        self.speed            = 0.1 # FILL IN 
         self.wheelbase_length = .35 # FILL IN
         self.steering_constant = .35
         self.trajectory  = utils.LineTrajectory("/followed_trajectory")
@@ -120,25 +120,33 @@ class PurePursuit(object):
             return
           
         nearSegmentIndex = np.argmin((nearestPoints))
-        #rospy.logerr(nearSegmentIndex)
+        rospy.logerr("Num of nearest points: %d", len(nearestPoints))
+        rospy.logerr("Num of trajectory points: %d", len(self.trajectory.points))
         
         onePoint = None
         otherPoint = None
         i = nearSegmentIndex
+        rospy.logerr("Current index: %d", i)
         while(onePoint is None and otherPoint is None):
             if (i >= len(self.trajectory.points) - 1):
                 rospy.logerr(str(nearSegmentIndex) + ' no find path')
                 self.speed = 0
-                break
-            
-            if (i <= 1):
-                rospy.logerr(str(nearSegmentIndex) + ' no find path')
+                #break
+
+            if (len(self.trajectory.points) - i < 100):
                 self.speed = 0
+                drive_cmd = AckermannDriveStamped()
+                drive_cmd.header.stamp = rospy.Time.now()
+                drive_cmd.drive.steering_angle = 0
+                drive_cmd.drive.speed = self.speed
+                rospy.logerr('STOPPING, WITHIN LOOKAHEAD DISTANCE')
+                self.drive_pub.publish(drive_cmd)
                 break
-            
+
             startPoint = self.trajectory.points[i]
             endPoint = self.trajectory.points[i+1]
             points = self.find_circle_line_intersection(curLoc,self.lookahead,np.array(startPoint),np.array(endPoint))
+
             if points is None:
                 self.speed = 0
                 drive_cmd = AckermannDriveStamped()
@@ -148,6 +156,7 @@ class PurePursuit(object):
                 rospy.logerr('points are none')
                 self.drive_pub.publish(drive_cmd)
                 return
+
             onePoint, otherPoint = points[0], points[1]
             no, yes, theta = euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))
             onePoint = self.checkInFront(onePoint,curLoc, theta)
@@ -173,19 +182,19 @@ class PurePursuit(object):
             self.pos2_publisher.publish(pose)
         
         if not onePoint is None:
-	    rospy.loginfo("smths moving")
+            rospy.logerr("smths moving")
             self.driveCommand(curLoc - onePoint, theta)
             return
         
         
         if not otherPoint is None:
-            rospy.loginfo("Other thing is moving")
+            rospy.logerr("Other thing is moving")
             self.driveCommand(curLoc - otherPoint, theta)
             return
     
     def driveCommand(self, point, theta):
-        rospy.logerr("Sending drive command")
-	rospy.logerr(str(point[0]) + ' ' +  str(point[1]))
+        #rospy.logerr("Sending drive command")
+	    #rospy.logerr(str(point[0]) + ' ' +  str(point[1]))
         drive_cmd = AckermannDriveStamped()
     
         

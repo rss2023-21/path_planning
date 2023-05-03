@@ -36,7 +36,7 @@ class PathPlan(object):
     GRID_MAP_SCALE = 5  # number of cells in grid map vs. actual map
 
     def __init__(self):
-        self.odom_topic = "/pf/pose/odom" # rospy.get_param("~odom_topic")
+        self.odom_topic = "/odom" # rospy.get_param("~odom_topic")
         rospy.loginfo("Using odometry topic: %s", self.odom_topic)
         self.map_sub = rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
         self.trajectory = LineTrajectory("/planned_trajectory")
@@ -84,7 +84,7 @@ class PathPlan(object):
         # this makes the walls thicker to stop path planning from getting too close to the walls
         # m2 = dilation(m, disk(5))
 
-        m2 = dilation(m, create_disk(5))
+        m2 = dilation(m, create_disk(2)) #Testing 
 
         # fig, ax = plt.subplots()
         # ax.imshow(m2)
@@ -164,6 +164,10 @@ class PathPlan(object):
         rospy.loginfo('Planning path from (%f, %f) to (%f, %f)', start_point.x, start_point.y, end_point.x, end_point.y)
         start = self.point_to_grid_loc(start_point)
         goal = self.point_to_grid_loc(end_point)
+        mid_point2 = Point(1.0945030689, 2.25761694908, 0) # x, y, z positions
+        mid2 = self.point_to_grid_loc(mid_point2)
+        mid_point1 = Point(2.26449012756, 1.59024965763, 0) # x, y, z positions
+        mid1 = self.point_to_grid_loc(mid_point1)
         rospy.loginfo("start")
         rospy.loginfo(start)
         rospy.loginfo("goal")
@@ -181,42 +185,58 @@ class PathPlan(object):
                 return 1000000
             return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
             # return abs(x1 - x2) + abs(y1 - y2)
-            
-        frontier = PriorityQueue()
-        frontier.put(start, 0)
-        came_from = {}
-        cost_so_far = {}
-        came_from[start] = None
-        cost_so_far[start] = 0
-        
-        while not frontier.empty():
-            current = frontier.get()
-            
-            if current == goal:
-                break
-            
-            for next in self.grid.neighbors(current):
-                new_cost = cost_so_far[current] + self.grid.cost(current, next)
-                if next not in cost_so_far or new_cost < cost_so_far[next]:
-                    cost_so_far[next] = new_cost
-                    priority = new_cost + heuristic(next, goal)
-                    frontier.put(next, priority)
-                    came_from[next] = current
-    
-        # self.trajectory.addPoint(start_point)
-        # rospy.loginfo(came_from)
-        points_reversed = []
-        while current != start:
-            # rospy.loginfo((current, cost_so_far[current]))
-            points_reversed.append(self.grid_loc_to_point(current))
-            current = came_from[current]
 
-        for point in points_reversed[::-1]:
+        def pathing(start, stop):  
+            frontier = PriorityQueue()
+            frontier.put(start, 0)
+            came_from = {}
+            cost_so_far = {}
+            came_from[start] = None
+            cost_so_far[start] = 0
+            
+        
+            while not frontier.empty():
+                current = frontier.get()
+                
+                if current == stop:
+                    break
+                
+                for next in self.grid.neighbors(current):
+                    new_cost = cost_so_far[current] + self.grid.cost(current, next)
+                    if next not in cost_so_far or new_cost < cost_so_far[next]:
+                        cost_so_far[next] = new_cost
+                        priority = new_cost + heuristic(next, stop)
+                        frontier.put(next, priority)
+                        came_from[next] = current
+    
+            # self.trajectory.addPoint(start_point)
+            # rospy.loginfo(came_from)
+            points_reversed = []
+            print(current)
+            while current != start:
+                # rospy.loginfo((current, cost_so_far[current]))
+                points_reversed.append(self.grid_loc_to_point(current))
+                rospy.loginfo(came_from[current])
+                current = came_from[current]
+            rospy.loginfo("Points reversed")
+            rospy.loginfo(points_reversed)
+            return points_reversed[::-1]
+        
+        # can combine as 
+        first_half = pathing(start, mid1)
+        middle = pathing(mid1, mid2)
+        second_half = pathing(mid2, goal)
+
+        # for point in points_reversed[::-1]:
+        #     self.trajectory.addPoint(point)
+
+        path_plan = first_half + middle + second_half
+        for point in path_plan:
             self.trajectory.addPoint(point)
 
         # self.trajectory.addPoint(end_point)
-	    # rospy.loginfo("The trajectory")
-	    # rospy.loginfo(self.trajectory.points)
+        rospy.loginfo("The trajectory")
+        rospy.loginfo(self.trajectory.points)
         # publish trajectory
         self.traj_pub.publish(self.trajectory.toPoseArray())
 

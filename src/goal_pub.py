@@ -10,8 +10,8 @@ if __name__ == "__main__":
 
     pub = rospy.Publisher("/move_base_simple/goal", PoseStamped, queue_size=1, latch=True)
     msg = PoseStamped()
-    msg.pose.position.x = -24.004
-    msg.pose.position.y = -.0857
+    msg.pose.position.x = 1.35775518417 #-24.004
+    msg.pose.position.y = 5.38434696198 #-.0857
     msg.pose.orientation.x = 0
     msg.pose.orientation.y = 0
     msg.pose.orientation.z = 0.999670

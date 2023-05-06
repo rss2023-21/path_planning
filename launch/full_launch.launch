@@ -1,0 +1,27 @@
+<launch>
+
+  <!-- Localization Launch a map from the maps folder-->
+        <arg name="map" default="/home/racecar/racecar_ws/src/final_challenge2023/city_driving/rss_map_final.yaml"/>
+        <node pkg="map_server" name="map_server" type="map_server" args="$(arg map)"/>
+
+        <node pkg="localization" type="particle_filter.py" name="particle_filter" output="screen">
+            <rosparam command="load" file="$(find localization)/params.yaml"/>
+        </node>
+  <!--- Build Trajectory -->
+
+
+        <node pkg="lab6" type="trajectory_builder.py" name="Trajectory_builder" output="screen"/>
+   
+  <!-- Path Planning -->
+      <node pkg="lab6" type="path_planning.py" name="Trajectory_planner" output="screen">
+          <!-- <param name="odom_topic" value="/pf/pose/odom"/> -->
+          <param name="odom_topic" value="/odom"/>
+      </node>
+
+  <!-- Pure Pursuit -->
+      <node pkg="lab6" type="pure_pursuit.py" name="Trajectory_follower">
+          <param name="odom_topic" value="/odom"/>
+       </node>
+
+
+</launch>

@@ -27,8 +27,8 @@ class PurePursuit(object):
         self.steering_constant = .35
         self.trajectory  = utils.LineTrajectory("/followed_trajectory")
         self.traj_sub = rospy.Subscriber("/trajectory/current", PoseArray, self.trajectory_callback, queue_size=1)
-        self.drive_pub = rospy.Publisher("/drive", AckermannDriveStamped, queue_size=1)
-        self.odom_sub  = rospy.Subscriber('/odom', Odometry,
+        self.drive_pub = rospy.Publisher("/vesc/ackermann_cmd_mux/input/navigation", AckermannDriveStamped, queue_size=1)
+        self.odom_sub  = rospy.Subscriber('/pf/pose/odom', Odometry,
                                           self.odom_callback,
                                           queue_size=1)
         
@@ -136,7 +136,7 @@ class PurePursuit(object):
                 break
             
             #rospy.logerr("Index in while loop: %d", i)
-            if (len(self.trajectory.points) - nearSegmentIndex < 30):
+            if (len(self.trajectory.points) - nearSegmentIndex < 55):
                 self.speed = 0
                 drive_cmd = AckermannDriveStamped()
                 drive_cmd.header.stamp = rospy.Time.now()

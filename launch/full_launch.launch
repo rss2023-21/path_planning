@@ -1,7 +1,7 @@
 <launch>
 
   <!-- Localization Launch a map from the maps folder-->
-        <arg name="map" default="/home/racecar/racecar_ws/src/final_challenge2023/city_driving/rss_map_final.yaml"/>
+        <arg name="map" default="/home/racecar/racecar_ws/src/final_challenge_team_21/final_challenge/src/city_driving/rss_map_final.yaml"/>
         <node pkg="map_server" name="map_server" type="map_server" args="$(arg map)"/>
 
         <node pkg="localization" type="particle_filter.py" name="particle_filter" output="screen">
